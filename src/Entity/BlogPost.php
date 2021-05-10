@@ -4,8 +4,26 @@ namespace App\Entity;
 
 use App\Repository\BlogPostRepository;
 use Doctrine\ORM\Mapping as ORM;
+use ApiPlatform\Core\Annotation\ApiResource;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
+ * @ApiResource(
+ *      itemOperations={
+ *          "GET",
+ *           "PUT"={
+ *              "security"="is_granted('IS_AUTHENTICATED_FULLY') and object.getAuthor() === user"
+ *          }
+ *      },
+ *      collectionOperations={
+ *          "GET",
+ *          "POST"={
+ *              "security"="is_granted('IS_AUTHENTICATED_FULLY')"
+ *          }
+ *      } 
+ * )
  * @ORM\Entity(repositoryClass=BlogPostRepository::class)
  */
 class BlogPost
@@ -19,28 +37,52 @@ class BlogPost
 
     /**
      * @ORM\Column(type="string", length=255)
+     * @Assert\NotBlank()
+     * @Assert\Length(min=6)
      */
     private $title;
 
     /**
      * @ORM\Column(type="datetime")
+     * @Assert\NotBlank()
+     * @Assert\Type("\DateTimeInterface")
      */
     private $published;
 
     /**
      * @ORM\Column(type="text")
+     * @Assert\NotBlank()
+     * @Assert\Length(min=20)
      */
     private $content;
 
     /**
-     * @ORM\Column(type="string", length=255)
+     * @ORM\ManyToOne(targetEntity="App\Entity\User", inversedBy="posts")
+     * @ORM\JoinColumn(nullable=false)
      */
     private $author;
 
     /**
      * @ORM\Column(type="string", length=255, nullable=true)
+     * @Assert\NotBlank()
      */
     private $slug;
+
+    /**
+     * @ORM\OneToMany(targetEntity="App\Entity\Comment", mappedBy="blogPost")
+     * @ORM\JoinColumn(nullable=false)
+     */
+    private $comments;
+
+    public function __construct()
+    {
+        $this->comments = new ArrayCollection();
+    }
+
+    public function getComments(): Collection
+    {
+        return $this->comments;
+    }
 
     public function getId(): ?int
     {
@@ -83,18 +125,6 @@ class BlogPost
         return $this;
     }
 
-    public function getAuthor(): ?string
-    {
-        return $this->author;
-    }
-
-    public function setAuthor(string $author): self
-    {
-        $this->author = $author;
-
-        return $this;
-    }
-
 
     public function getSlug(): ?string
     {
@@ -106,4 +136,21 @@ class BlogPost
         $this->slug = $slug;
     }
 
+    /**
+     * @return User
+     */
+    public function getAuthor(): User
+    {
+        return $this->author;
+    }
+
+    /**
+     * @param User $author
+     */
+    public function setAuthor(User $author): self
+    {
+        $this->author = $author;
+
+        return $this;
+    }
 }
